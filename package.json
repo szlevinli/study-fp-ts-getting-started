@@ -1,0 +1,17 @@
+{
+  "name": "typescript-node-fp-starter",
+  "version": "1.0.0",
+  "main": "index.js",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^15.0.1",
+    "@types/ramda": "^0.27.40",
+    "nodemon": "^2.0.7",
+    "ts-node": "^9.1.1",
+    "typescript": "^4.2.4"
+  },
+  "dependencies": {
+    "fp-ts": "^2.10.5",
+    "ramda": "^0.27.1"
+  }
+}
