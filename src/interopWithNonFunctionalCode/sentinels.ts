@@ -5,11 +5,11 @@
 // Solution: `Option`
 
 import { Option, none, some } from 'fp-ts/Option';
+import { curry } from 'ramda';
 
-export const findIndex = <A>(
-  xs: Array<A>,
-  predicate: (a: A) => boolean
-): Option<number> => {
-  const index = xs.findIndex(predicate);
-  return index === -1 ? none : some(index);
-};
+export const findIndex = curry(
+  <A>(predicate: (a: A) => boolean, xs: Array<A>): Option<number> => {
+    const index = xs.findIndex(predicate);
+    return index === -1 ? none : some(index);
+  }
+);
