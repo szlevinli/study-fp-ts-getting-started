@@ -11,14 +11,23 @@ export const getEq = <A>(E: Eq<A>): Eq<ReadonlyArray<A>> =>
       xs.length === ys.length && xs.every((x, i) => E.equals(x, ys[i]))
   );
 
+export const contramap: <A, B>(f: (b: B) => A) => (E: Eq<A>) => Eq<B> =
+  (f) => (E) =>
+    fromEquals((x, y) => E.equals(f(x), f(y)));
+
 // Example `Monoid`
 export const getMonoid = <A>(M: Monoid<A>): Monoid<IO<A>> =>
   getApplicativeMonoid(ioApplicative)(M);
 
-export const replicateIO = (n: number) => (mv: IO<void>): IO<void> =>
-  concatAll(getMonoid(monoidVoid))(replicate(n, mv));
+export const replicateIO =
+  (n: number) =>
+  (mv: IO<void>): IO<void> =>
+    concatAll(getMonoid(monoidVoid))(replicate(n, mv));
 
-const fibonacci_ = (ac1: number) => (ac2: number) => (n: number): number =>
-  n <= 1 ? ac2 : fibonacci_(ac2)(ac1 + ac2)(n - 1);
+const fibonacci_ =
+  (ac1: number) =>
+  (ac2: number) =>
+  (n: number): number =>
+    n <= 1 ? ac2 : fibonacci_(ac2)(ac1 + ac2)(n - 1);
 
 export const fibonacci = fibonacci_(1)(1);
