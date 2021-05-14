@@ -1,16 +1,33 @@
+import { Eq as eqBoolean } from 'fp-ts/boolean';
+import { log as ioLog } from 'fp-ts/Console';
+import { now } from 'fp-ts/Date';
+import { Eq } from 'fp-ts/Eq';
+import { pipe } from 'fp-ts/function';
+import { of as ioOf } from 'fp-ts/IO';
+import { Eq as eqNumber, MonoidSum } from 'fp-ts/number';
+import * as COMB from './combinator';
 import {
+  contramap,
   getEq,
   getMonoid,
-  contramap,
-  replicateIO,
   printFib,
+  replicateIO,
+  time,
 } from './combinator';
-import * as COMB from './combinator';
-import { Eq as eqNumber, MonoidSum } from 'fp-ts/number';
-import { Eq as eqBoolean } from 'fp-ts/boolean';
-import { of as ioOf } from 'fp-ts/IO';
-import { pipe } from 'fp-ts/function';
-import { Eq } from 'fp-ts/Eq';
+
+//
+// mock
+//
+
+jest.mock('fp-ts/Date');
+const mockNow = now as jest.MockedFunction<typeof now>;
+
+jest.mock('fp-ts/Console');
+const mockIoLog = ioLog as jest.MockedFunction<typeof ioLog>;
+
+//
+// test
+//
 
 it('[getEq] Eq<number> to Eq<ReadonlyArray<number>>', () => {
   const result = getEq(eqNumber);
@@ -71,4 +88,27 @@ it('打印三次随机菲波那切数列值', () => {
 
   expect(fibs.length).toBe(times);
   expect(fibs).toEqual([...Array(times)].map(() => 1));
+});
+
+it('[time] 可以获取执行动作所消耗的时间', () => {
+  const fibs: number[] = [];
+  const spyLog = jest.spyOn(COMB, 'log');
+  const spyFib = jest.spyOn(COMB, 'fibonacci');
+  spyLog.mockImplementation((msg: number) => () => {
+    fibs.push(msg);
+  });
+  spyFib.mockImplementation(() => 1);
+
+  mockNow.mockImplementationOnce(() => 0).mockImplementationOnce(() => 10);
+  let logResult = '';
+  mockIoLog.mockImplementation((msg) => () => {
+    logResult = String(msg);
+  });
+
+  const times = 3;
+  time(pipe(printFib, pipe(times, replicateIO)))();
+
+  expect(fibs.length).toBe(times);
+  expect(fibs).toEqual([...Array(times)].map(() => 1));
+  expect(logResult).toMatch(/10/gi);
 });

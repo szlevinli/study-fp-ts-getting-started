@@ -142,12 +142,75 @@ export const printFib: IO<void> = pipe(
 ```
 
 - `randomInt`: 随机生成 `IO<number>`
-- `ioChain`: 返回 `IO<number>`. 使用 `chain` 即 `Apply` 接口的目的是, `ioChain` 函数接收的第一个参数是函数 `(n) => log(fibonacci(n))` 并返回 `IO<void>`, 第二个参数是 `IO<number>`, 因此需要使用 `chain` 的功能进行 `flatMap` 操作.
+- `ioChain`: 返回 `IO<number>`. 使用 `chain` 即 `Monad` 接口的目的是, `ioChain` 函数接收的第一个参数是函数 `(n) => log(fibonacci(n))` 并返回 `IO<void>`, 第二个参数是 `IO<number>`, 因此需要使用 `chain` 的功能进行 `flatMap` 操作.
 
 应用上面的函数, 实现随机打印菲波那切数列 `n` 次. (这里的 `n` 被设定为 3 次)
 
 ```ts
-pipe(printFib, pipe( 3, replicateIO))();
+replicateIO(3)(printFib);
+/*
+1346269
+9227465
+3524578
+*/
 ```
 
 > 突然想到 `combinator` 和 `map` 的作用仿佛是一样的, 主要区别在于 `combinator` 没有 `(a: A) => B` 函数.
+
+## Example 3: `IO`
+
+创建一个函数模拟实现类似 Unix 系统上的命令, 即在控制台打印出执行某项任务/工作/程序所消耗的时间.
+
+下面的这个方法实现极具 functional programming 风格, 那就是组合, 组合, 还是组合.
+
+```ts
+export const time = <A>(ma: IO<A>): IO<A> =>
+  Monad.chain(now, (start) =>
+    Monad.chain(ma, (a) =>
+      Monad.chain(now, (end) =>
+        Monad.map(ioLog(`Elapsed: ${end - start}`), () => a)
+      )
+    )
+  );
+```
+
+首先我们先看一下 `Monad.chain` 的签名:
+
+```ts
+chain: <A, B>(fa: F<A>, f: (a: A) => F<B>) => F<B>
+```
+
+> - 上面的代码进行了简化为了更容易理解, 其中 `F` 表示的是类型泛型.
+> - `F<A>` 可以理解为拥有 `A` 类型值的结构体 `F`. 比如 `F` 是结构体 `IO`, `A` 的类型是 `number`, 表示为 `IO<number>`
+
+- `Monad.chain(now, (start) =>` 其中的 `now` 是 `IO<number>` 类型, 所以 `start` 肯定也是必须是 `number`
+- `Monad.chain(ma, (a) =>` 其中的 `ma` 是我们需要执行的动作, 也就是被测量耗时多少的目标, 它的类型是 `IO<void>`, 所以 `a` 的类型是 `void`
+- `Monad.chain(now, (end) =>` 参见上面 `Monad.chain(now, (start) =>` 的说明
+- `Monad.map(ioLog(`Elapsed: ${end - start}`), () => a)` 其中 `map` 函数接收的第一个参数的类型是 `IO<void>`, 第二个参数是函数, 这个函数接收一个 `void` 类型的参数, 其实这个函数在整个流程中并无用途, 仅仅是为了满足调用规范.
+
+调用方法
+
+```ts
+time(replicateIO(3)(printFib))();
+/*
+5702887
+1346269
+14930352
+Elapsed: 193
+*/
+```
+
+如果我们还想知道单次执行的时间, 可以这样:
+
+```ts
+time(replicateIO(3)(time(printFib)))();
+/*
+3524578
+Elapsed: 32
+14930352
+Elapsed: 125
+3524578
+Elapsed: 32
+Elapsed: 189
+*/
+```

@@ -1,12 +1,22 @@
-import { Eq, fromEquals } from 'fp-ts/Eq';
 import { getApplicativeMonoid } from 'fp-ts/Applicative';
-import { IO, Applicative as ioApplicative, chain as ioChain } from 'fp-ts/IO';
-import { Monoid, monoidVoid, concatAll } from 'fp-ts/Monoid';
-import { replicate } from 'fp-ts/ReadonlyArray';
-import { randomInt } from 'fp-ts/Random';
+import { Eq, fromEquals } from 'fp-ts/Eq';
 import { pipe } from 'fp-ts/function';
+import {
+  Applicative as ioApplicative,
+  chain as ioChain,
+  IO,
+  Monad,
+} from 'fp-ts/IO';
+import { concatAll, Monoid, monoidVoid } from 'fp-ts/Monoid';
+import { randomInt } from 'fp-ts/Random';
+import { replicate } from 'fp-ts/ReadonlyArray';
+import { now } from 'fp-ts/Date';
+import { log as ioLog } from 'fp-ts/Console';
 
-// Example `Eq`
+//
+// Example1: `Eq`
+//
+
 export const getEq = <A>(E: Eq<A>): Eq<ReadonlyArray<A>> =>
   fromEquals(
     (xs, ys) =>
@@ -17,7 +27,10 @@ export const contramap: <A, B>(f: (b: B) => A) => (E: Eq<A>) => Eq<B> =
   (f) => (E) =>
     fromEquals((x, y) => E.equals(f(x), f(y)));
 
-// Example `Monoid`
+//
+// Example2: `Monoid`
+//
+
 export const getMonoid = <A>(M: Monoid<A>): Monoid<IO<A>> =>
   getApplicativeMonoid(ioApplicative)(M);
 
@@ -44,3 +57,16 @@ export const printFib: IO<void> = pipe(
   randomInt(30, 35),
   ioChain((n) => log(fibonacci(n)))
 );
+
+//
+// Example 3: `IO`
+//
+
+export const time = <A>(ma: IO<A>): IO<A> =>
+  Monad.chain(now, (start) =>
+    Monad.chain(ma, (a) =>
+      Monad.chain(now, (end) =>
+        Monad.map(ioLog(`Elapsed: ${end - start}`), () => a)
+      )
+    )
+  );
