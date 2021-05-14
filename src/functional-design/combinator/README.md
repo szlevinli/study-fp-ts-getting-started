@@ -87,4 +87,67 @@ expect(eqUser.equals(user1, user2)).toBeTruthy();
 expect(eqUser.equals(user1, user3)).toBeFalsy();
 ```
 
-## Example 2: ``
+## Example 2: `Monoid`
+
+创建 `getMonoid` combinator: 给定 `Monoid<A>`, 将其转换为 `Monoid<IO<A>>`.
+
+```ts
+export const getMonoid = <A>(M: Monoid<A>): Monoid<IO<A>> =>
+  getApplicativeMonoid(ioApplicative)(M);
+```
+
+> `getMonoid` 可以使用 `fp-ts/Applicative` 内建函数 `getApplicativeMonoid` 代替.
+
+使用 `getMonoid` 创建 `replicateIO` combinator: 给定数字 `n` 和一个动作 `mv: IO<void>`, 实现执行 `n` 次 `mv` 的效果.
+
+```ts
+export const replicateIO =
+  (n: number) =>
+  (mv: IO<void>): IO<void> =>
+    concatAll(getMonoid(monoidVoid))(replicate(n, mv));
+```
+
+- `replicate` 返回一个数组, 类型为 `readonly IO<void>[]`
+- `concatAll` 使用 `getMonoid(monoidVoid)` 返回的 `Monoid<IO<void>>` 将 `readonly IO<void>[]` 中的 `item: IO<void>` 合并成一个 `IO<void>`.
+
+下面我们使用 `replicateIO` 实现随机打印菲波那切数列. 首先我们封装 `console.log` 到 `IO` 中
+
+```ts
+export const log =
+  (msg: unknown): IO<void> =>
+  () =>
+    console.log(String(msg));
+```
+
+接着创建一个菲波那切数列生成器, 请注意该函数使用了 curry 化以及 '尾递归' 优化
+
+```ts
+// curry
+const fibonacci_ =
+  (ac1: number) =>
+  (ac2: number) =>
+  (n: number): number =>
+    n <= 1 ? ac2 : fibonacci_(ac2)(ac1 + ac2)(n - 1);
+
+export const fibonacci = fibonacci_(1)(1);
+```
+
+最后实现随机打印函数
+
+```ts
+export const printFib: IO<void> = pipe(
+  randomInt(30, 35),
+  ioChain((n) => log(fibonacci(n)))
+);
+```
+
+- `randomInt`: 随机生成 `IO<number>`
+- `ioChain`: 返回 `IO<number>`. 使用 `chain` 即 `Apply` 接口的目的是, `ioChain` 函数接收的第一个参数是函数 `(n) => log(fibonacci(n))` 并返回 `IO<void>`, 第二个参数是 `IO<number>`, 因此需要使用 `chain` 的功能进行 `flatMap` 操作.
+
+应用上面的函数, 实现随机打印菲波那切数列 `n` 次. (这里的 `n` 被设定为 3 次)
+
+```ts
+pipe(printFib, pipe( 3, replicateIO))();
+```
+
+> 突然想到 `combinator` 和 `map` 的作用仿佛是一样的, 主要区别在于 `combinator` 没有 `(a: A) => B` 函数.

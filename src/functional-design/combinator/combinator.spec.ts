@@ -1,4 +1,11 @@
-import { getEq, getMonoid, contramap } from './combinator';
+import {
+  getEq,
+  getMonoid,
+  contramap,
+  replicateIO,
+  printFib,
+} from './combinator';
+import * as COMB from './combinator';
 import { Eq as eqNumber, MonoidSum } from 'fp-ts/number';
 import { Eq as eqBoolean } from 'fp-ts/boolean';
 import { of as ioOf } from 'fp-ts/IO';
@@ -47,4 +54,21 @@ it('[getMonoid] Monoid<number> to Monoid<IO<number>>', () => {
   const result = ioMonoid.concat(ioA, ioB)();
 
   expect(result).toBe(10);
+});
+
+it('打印三次随机菲波那切数列值', () => {
+  const fibs: number[] = [];
+  const spyLog = jest.spyOn(COMB, 'log');
+  const spyFib = jest.spyOn(COMB, 'fibonacci');
+  spyLog.mockImplementation((msg: number) => () => {
+    fibs.push(msg);
+  });
+  spyFib.mockImplementation(() => 1);
+
+  const times = 3;
+
+  pipe(printFib, pipe(times, replicateIO))();
+
+  expect(fibs.length).toBe(times);
+  expect(fibs).toEqual([...Array(times)].map(() => 1));
 });

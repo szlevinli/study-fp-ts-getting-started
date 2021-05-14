@@ -1,8 +1,10 @@
 import { Eq, fromEquals } from 'fp-ts/Eq';
 import { getApplicativeMonoid } from 'fp-ts/Applicative';
-import { IO, Applicative as ioApplicative } from 'fp-ts/IO';
+import { IO, Applicative as ioApplicative, chain as ioChain } from 'fp-ts/IO';
 import { Monoid, monoidVoid, concatAll } from 'fp-ts/Monoid';
 import { replicate } from 'fp-ts/ReadonlyArray';
+import { randomInt } from 'fp-ts/Random';
+import { pipe } from 'fp-ts/function';
 
 // Example `Eq`
 export const getEq = <A>(E: Eq<A>): Eq<ReadonlyArray<A>> =>
@@ -24,6 +26,12 @@ export const replicateIO =
   (mv: IO<void>): IO<void> =>
     concatAll(getMonoid(monoidVoid))(replicate(n, mv));
 
+export const log =
+  (msg: unknown): IO<void> =>
+  () =>
+    console.log(String(msg));
+
+// curry
 const fibonacci_ =
   (ac1: number) =>
   (ac2: number) =>
@@ -31,3 +39,8 @@ const fibonacci_ =
     n <= 1 ? ac2 : fibonacci_(ac2)(ac1 + ac2)(n - 1);
 
 export const fibonacci = fibonacci_(1)(1);
+
+export const printFib: IO<void> = pipe(
+  randomInt(30, 35),
+  ioChain((n) => log(fibonacci(n)))
+);
