@@ -9,5 +9,6 @@
     "morphisms",
     "kinded",
     "combinator"
-  ]
+  ],
+  "ignoreWords": ["jonk", "zoop"]
 }
