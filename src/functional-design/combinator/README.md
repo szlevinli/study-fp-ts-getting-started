@@ -214,3 +214,81 @@ Elapsed: 32
 Elapsed: 189
 */
 ```
+
+## General `time`
+
+上面的 `time` 函数有如下问题
+
+- 不够灵活. 比如使用者无法选择使用 elapsed 干些别的什么事
+- 只能使用 `IO` 结构体
+
+首先解决第一个问题, 即不够灵活的问题. 改写 `time` 函数, 将 elapsed 值当做输出返回给使用者, 这样他们就可以使用该值做他们想做的事情了.
+
+```ts
+export const time = <A>(ma: IO<A>): IO<[A, number]> =>
+  Monad.chain(now, (start) =>
+    Monad.chain(ma, (a) => Monad.map(now, (end) => [a, end - start]))
+  );
+```
+
+接着我们就可以使用新的 `time` 函数结合 `log` 函数来实现最早的 `time` 函数功能, 我们吧这个新函数命名为 `withLogging`
+
+```ts
+export const withLogging = <A>(ma: IO<A>): IO<A> =>
+  Monad.chain(time(ma), ([a, milliseconds]) =>
+    Monad.map(log(`Result: ${a}, Elapsed: ${milliseconds}`), () => a)
+  );
+```
+
+同时我们发现, 新的 `time` 函数返回的是一个 tuple 结构分别放置的是 [动作执行结果, 消耗的时间], 但有时候我们可能不需要 '消耗的时间', 仅需要 '动作执行结果', 那么我们可以定义如下函数
+
+```ts
+export const ignoreTime = <A>(ma: IO<[A, unknown]>): IO<A> =>
+  Monad.map(ma, ([a]) => a);
+```
+
+最后为了体会一下将 `time` 函数更泛化后的强大, 我们来编写一个函数, 该函数可以返回执行速度最快的 '动作'(action)
+
+```ts
+export const fastest = <A>(head: IO<A>, tail: Array<IO<A>>): IO<A> => {
+  const ordTuple = contramap(([_, elapsed]: [A, number]) => elapsed)(ordNumber);
+  const semigroupTuple = min(ordTuple);
+  const semigroupIO = getApplySemigroup(applyIO)(semigroupTuple);
+  const fastest = concatAll(semigroupIO)(time(head))(tail.map(time));
+  return ignoreTime(fastest);
+};
+```
+
+上面这段代码还是有点难度的, 我们先把思路理顺
+
+- "返回执行速度最快的 '动作'(action)" 少不了比大小, 且比的是数字大小, 因此我们需要引入 `Ord<number>`
+- 既然有比较, 肯定就有比较的对象, 且这些对象是任意多的, 我们可以使用数组的方式来组织这些对象, 最后要从中选择一个最快的出来, 这就涉及多变一, 需要引入类似 `fold` 的功能, 这里使用 `concatAll` 方法来实现
+
+下面我们一步一步的来看代码
+
+- `ordTuple` 使用反向映射(`contramap`)将 `Ord<number>` 映射成 `Ord<[A, number]>`. 该函数 `ordTuple` 的作用是, 使用 tuple 中第二个元素作为整个 tuple 的大小比较.
+- `semigroupTuple` 使用 `Semigroup` 结构体的 `min` 函数创建 `Semigroup<[A, number]>`. `min` 函数的参数只有一个, 类型为 `Ord` 的结构体, 放到这里是 `Ord<[A, number]>`. 该函数 `semigroupTuple` 作用是, 从比较的对象中, 返回小的那个.
+- `semigroupIO` 使用 `getApplySemigroup` 函数将 `Semigroup<[A, number]>` lift 成 `Semigroup<IO<[A, number]>>`
+- `fastest` 获取运行时间最短的动作. 使用 `semigroupIO` 进行大小判断, `time(head)` 作为第一个比较对象, 与 `tail.map(time)` 返回的对象比较, 取运行时间短的, 然后与下一个对象比较, 直至所有对象比对完成, 返回 `IO<[A, number]>`.
+- `ignoreTime` 提取 tuple 中的 `A`
+
+我们来执行看看效果
+
+```ts
+const fib = (n: number): number => (n <= 1 ? 1 : fib(n - 1) + fib(n - 2));
+
+const program = withLogging(Monad.map(randomInt(30, 35), fib));
+
+const fastestProgram = Monad.chain(fastest(program, [program, program]), (a) =>
+  log(`Fastest result is: ${a}`)
+);
+
+fastestProgram();
+
+/*
+Result: 5702887, Elapsed: 34
+Result: 1346269, Elapsed: 8
+Result: 9227465, Elapsed: 55
+Fastest result is: 1346269
+*/
+```
