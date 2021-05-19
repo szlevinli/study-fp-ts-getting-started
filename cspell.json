@@ -8,7 +8,8 @@
     "morphism",
     "morphisms",
     "kinded",
-    "combinator"
+    "combinator",
+    "vfile"
   ],
   "ignoreWords": ["jonk", "zoop"]
 }
