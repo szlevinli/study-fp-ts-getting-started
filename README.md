@@ -8,6 +8,36 @@
 
 ## 必须知道的概念
 
+### Type classes
+
+> The programmer defines a **type class** by specifying a set of functions or constant names, together with their respective types, that must exist for every type that belongs to the class.
+
+In `fp-ts` type classes are encoded as TypeScript `interface`.
+
+A type class `Eq`, intended to contain types that admit **equality**, is declare in the following way
+
+```typescript
+interface Eq<A> {
+  readonly equals: (x: A, y: A) => boolean
+}
+```
+
+The declaration may be read as
+
+> a type `A` belongs to type class `Eq` if there is a function named `equals` of the appropriate type, defined on it
+
+### Instance
+
+In `fp-ts` instances are encoded as static dictionaries.
+
+As an example here's the instance of `Eq` for the type `number`
+
+```typescript
+const eqNumber: Eq<number> = {
+  equals: (x, y) => x === y
+}
+```
+
 ### pure program
 
 在 [Canti](https://dev.to/gcanti/getting-started-with-fp-ts-functor-36ek) 的系列文章中, 他是这么描述 **pure program** 的
@@ -77,7 +107,14 @@ There's an operation `∘`, named "composition", such that the following propert
 - associativity: 如果 `f: A ⟼ B`, `g: B ⟼ C` 和 `h: C ⟼ D`, 则 `h ∘ (g ∘ f) = (h ∘ g) ∘ f`
 - identity: 对于每个对象 `X`, 一定存在一个态射 `identity: X ⟼ X`, 同时对于 `f: A ⟼ X` 和 `g: X ⟼ B`, 都存在 `identity ∘ f = f` 和 `g ∘ identity = g`
 
-<img src="assets/Category.png" alt="category" style="width: 300px">
+<img src="assets/Category.png" alt="category" style="width: 200px">
+
+### A category for TypeScript
+
+- **objects** are all the TypeScript types: `string`, `number`, `Array<string>`, ...
+- **morphisms** are all the TypeScript functions: `(a: A) => B`, `(b: B) => C`, ... where `A`, `B`, `C`, ... are TypeScript types
+- **identity morphisms** are all encoded as a single polymorphic function `const identity = <A>(a: A): A => a`
+- **composition of morphisms** is the usual function composition
 
 ## Functor
 
