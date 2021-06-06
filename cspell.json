@@ -9,7 +9,10 @@
     "morphisms",
     "kinded",
     "combinator",
-    "vfile"
+    "vfile",
+    "effectful",
+    "giulio",
+    "canti"
   ],
   "ignoreWords": ["jonk", "zoop"]
 }
