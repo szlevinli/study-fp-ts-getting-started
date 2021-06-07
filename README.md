@@ -125,6 +125,66 @@ There's an operation `∘`, named "composition", such that the following propert
 > - `f: (a: A) => B`
 > - `g: (c: C) => D`
 
+因为上面这个问题太抽象, 我们需要设置一些约束在 `B` 和 `C` 上.
+
+我们已经知道如果 `B = C` 那么解决方法就是使用普通函数组合
+
+```typescript
+function compose<A, B, D>(g: (b: B) => D, f: (a: A) => B): (a: A) => 
+  (a) => g(f(a))
+```
+
+### 为什么需要 `Functor`
+
+上面是 `B = C` 的情况, 如果 `B = F<C>` 呢?
+
+- `f: (a: A) => F<B>` is an effectful program
+- `g: (b: B) => C` is a pure program
+
+为了将 `f` 和 `g` 进行组合, 我们需要找到一个将 `g` 从 `(b: B) => C` **lift** 成 `(fb:  F<B>) => F<C>` 的方法. 这里的 **lift** 所做的工作根据范畴论的理解来说, 就是将 `B ⟼ C` 的态射 `g` 映射到 `F` 的范畴中.
+
+如果我们能够找到将 `g` **lift** 成 `F<g>` 的方法, 那么 `f` 和 `g` 的组合就可以使用如下形式进行, 即 `(a: A) => F<g>(f(a))`.
+
+现在的问题转变成如何寻找到这么一个 **lift** 的问题了, 我们将所找到的 **lift** 给了一个统一的名称 `Functor`.
+
+### Functor 的定义
+
+Functor are **mapping between categories** that preserve the categorical structure, i.e. that preserve identity morphisms and composition.
+
+> *Functor 指的是在两个范畴间进行保证范畴结构不变的映射, 所谓范畴结构不变就是指的在映射后, 目标范畴保持原范畴中的 identity 态射和组合关系*
+
+Since categories are constituted of two things (objects and morphisms) a functor is constituted of two things as well:
+
+- a **mapping between objects** that associate to each object `X` in ***C*** an object in ***D***
+- a **mapping between morphisms** that associates to each morphism in ***C*** a morphism in ***D***
+
+<img src="./assets/functor.jpg" alt="functor" width="200" />
+
+### Functor Definition
+
+A functor is a pair `(F, lift)` where
+
+- `F` is a `n`-ary type constructor (`n >= 1`) which maps each type `X` to the type `F<X>` (**mapping between objects**)
+- `lift` is a function with the following signature
+
+```typescript
+const lift = <A, B>(f: (a: A) => B) => ((fa: F<A>) => F<B>)
+```
+
+which maps each function: `f: (a: A) => B` to a function `lift(f): (fa: F<A>) => F<B>` (**mapping between morphisms**).
+
+The following properties must hold
+
+- `lift(identity(X)) = identity(F<X>)` (**identities map to identities**)
+- `lift(g ∘ f) = lift(g) ∘ lift(f)` (**mapping a composition is the composition of the mapping**)
+
+The `lift` function is also known through a variant called `map`, which is basically `lift` with the arguments rearrange
+
+```typescript
+const lift = <A, B>(f: (a: A) => B) => ((fa: F<A>) => F<B>)
+const map = <A, B>(fa: F<A>, f: (a: A) => B) => F<B>
+```
+
 ## Applicative
 
 ## Monad
