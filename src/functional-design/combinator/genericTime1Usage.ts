@@ -1,15 +1,11 @@
-import { IO, Monad, Apply as applyIO } from 'fp-ts/IO';
-import { now } from 'fp-ts/Date';
-import { log } from 'fp-ts/Console';
-import { concatAll, min, Semigroup } from 'fp-ts/Semigroup';
-import { contramap } from 'fp-ts/Ord';
-import { Ord as ordNumber } from 'fp-ts/number';
 import { getApplySemigroup } from 'fp-ts/Apply';
-
-export const time = <A>(ma: IO<A>): IO<[A, number]> =>
-  Monad.chain(now, (start) =>
-    Monad.chain(ma, (a) => Monad.map(now, (end) => [a, end - start]))
-  );
+import { log } from 'fp-ts/Console';
+import { Apply as applyIO, IO, Monad } from 'fp-ts/IO';
+import { Ord as ordNumber } from 'fp-ts/number';
+import { contramap } from 'fp-ts/Ord';
+import { randomInt } from 'fp-ts/Random';
+import { concatAll, min } from 'fp-ts/Semigroup';
+import { time } from './genericTime1';
 
 export const withLogging = <A>(ma: IO<A>): IO<A> =>
   Monad.chain(time(ma), ([a, milliseconds]) =>
@@ -26,3 +22,15 @@ export const fastest = <A>(head: IO<A>, tail: Array<IO<A>>): IO<A> => {
   const fastest = concatAll(semigroupIO)(time(head))(tail.map(time));
   return ignoreTime(fastest);
 };
+
+const fib = (n: number): number => (n <= 1 ? 1 : fib(n - 1) + fib(n - 2));
+
+const program = withLogging(Monad.map(randomInt(30, 35), fib));
+
+// program();
+
+const fastestProgram = Monad.chain(fastest(program, [program, program]), (a) =>
+  log(`Fastest result is: ${a}`)
+);
+
+fastestProgram();

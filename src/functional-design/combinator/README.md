@@ -215,7 +215,7 @@ Elapsed: 189
 */
 ```
 
-## General `time`
+## Generic `time`
 
 上面的 `time` 函数有如下问题
 
