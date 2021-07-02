@@ -292,3 +292,87 @@ Result: 9227465, Elapsed: 55
 Fastest result is: 1346269
 */
 ```
+
+接下来我们来解决 `time` 函数只能用于 `IO` 结构体的问题.
+
+这里使用了一种称之为 **Tagless Final** 的设计, 该设计主要用在 FP 领域内, 该设计的核心理念就是使用 **Monadic**, 也就是使用 单子华的应用程序.
+
+我们再来仔细分析一下 `time` 函数
+
+```typescript
+export const time = <A>(ma: IO<A>): IO<[A, number]> =>
+  Monad.chain(now, (start) =>
+    Monad.chain(ma, (a) => Monad.map(now, (end) => [a, end - start]))
+  );
+```
+
+核心代码是在于使用 `Monad` 来实现功能, `Monad` 是实现了如下方法的接口(或称之为 type class)
+
+```typescript
+{
+  map: ...
+  of: ...
+  ap: ...
+  chain: ...
+}
+```
+
+在上面 `time` 的定义中, `Monad` 是 `IO` type class 所实现的 `Monad` instance, 为了泛化 `time` 函数, 就需要将定义在 `time` 函数中的 `Monad` 不与具体的某一个 type class 绑定, 也就是需要使用泛化的 `Monad`.
+
+```typescript
+import { IO } from 'fp-ts/lib/IO'
+import { Monad1 } from 'fp-ts/lib/Monad'
+import { Kind, URIS } from 'fp-ts/lib/HKT'
+
+export interface MonadIO<M extends URIS> extends Monad1<M> {
+  readonly fromIO: <A>(fa: IO<A>) => Kind<M, A>
+}
+```
+
+上面定义的 `MonadIO` type class 扩展了 `Monad` type class 并新增了一个 `fromIO` 接口, 也就是说 `MonadIO` 将任意的 `IO<A>` lift 成 `Monad<A>` type class.
+
+回到我们的问题, 现在我们可以这样重构 `time` 函数
+
+```typescript
+export function time<M extends URIS>(
+  M: MonadIO<M>
+): <A>(ma: Kind<M, A>) => Kind<M, [A, number]> {
+  const now = M.fromIO(D.now) // lifting
+  return ma => M.chain(now, start => M.chain(ma, a => M.map(now, end => [a, end - start])))
+}
+```
+
+现在 `time` 函数中的 `Monad` 从 `IO.Monad` 替换成可以将任意 `IO<A>` lift 成 `Monad<A>`.
+
+这里需要理解为什么我们泛化 `time` 时需要提供 `MonadIO` 接口, 而不是其他类型的 `Monad`, 这是因为 `time` 函数中调用的 `now` 是 `IO<number>`, 所以需要一种可以将任意 `IO<A>` lift 成 `Monad` 的方法, 这就是为什么命名为 `MonadIO` 的原因.
+
+接下来我们来看一下如何编写 `MonadIO` 的 instance
+
+```typescript
+import { URI, io } from 'fp-ts/lib/IO'
+import { identity } from 'fp-ts/lib/function'
+
+export const monadIOIO: MonadIO<URI> = {
+  ...io,
+  fromIO: identity
+}
+```
+
+```typescript
+import { URI, task, fromIO } from 'fp-ts/lib/Task'
+
+const monadIOTask: MonadIO<URI> = {
+  ...task,
+  fromIO: fromIO
+}
+```
+
+现在我们可以定义不同的 `time` 方法了
+
+```typescript
+// timeIO: <A>(ma: IO<A>) => IO<[A, number]>
+const timeIO = time(monadIOIO)
+
+// timeTask: <A>(ma: Task<A>) => Task<[A, number]>
+const timeTask = time(monadIOTask)
+```
