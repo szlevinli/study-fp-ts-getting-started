@@ -12,7 +12,8 @@
     "vfile",
     "effectful",
     "giulio",
-    "canti"
+    "canti",
+    "tagless"
   ],
-  "ignoreWords": ["jonk", "zoop"]
+  "ignoreWords": ["jonk", "zoop", "IOIO"]
 }
