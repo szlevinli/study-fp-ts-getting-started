@@ -25,7 +25,7 @@ it('[sum] should be return sum total', () => {
   expect(sum(a)).toBe(6);
 });
 
-it('should be merge `Option`', () => {
-  expect(S.concat(O.some(1), O.none)).toEqual(O.none);
-  expect(S.concat(O.some(1), O.some(2))).toEqual(O.some(3));
-});
+// it('should be merge `Option`', () => {
+//   expect(S.concat(O.some(1), O.none)).toEqual(O.none);
+//   expect(S.concat(O.some(1), O.some(2))).toEqual(O.some(3));
+// });

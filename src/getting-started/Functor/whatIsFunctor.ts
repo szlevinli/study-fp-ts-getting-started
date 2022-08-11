@@ -1,4 +1,4 @@
-import { option as O, task as T, functor as FT } from 'fp-ts';
+import { opt as O, task as T, functor as FT } from 'fp-ts';
 
 /**
  * 函数式编程的核心问题是函数的组合 function composition
@@ -25,20 +25,23 @@ import { option as O, task as T, functor as FT } from 'fp-ts';
 // lift for Array
 // liftArray 实际实现的是将 g 函数, lift 成 fb 函数
 // `(b: B) => C` 变成 `(b: Array<B>) => Array<C>`
-export const liftArray = <B, C>(
-  g: (b: B) => C
-): ((fb: Array<B>) => Array<C>) => (fb) => fb.map(g);
+export const liftArray =
+  <B, C>(g: (b: B) => C): ((fb: Array<B>) => Array<C>) =>
+  (fb) =>
+    fb.map(g);
 
 // lift for Option
-export const liftOption = <B, C>(
-  g: (b: B) => C
-): ((fb: O.Option<B>) => O.Option<C>) => (fb) =>
-  O.isNone(fb) ? O.none : O.some(g(fb.value));
+export const liftOption =
+  <B, C>(g: (b: B) => C): ((fb: O.Option<B>) => O.Option<C>) =>
+  (fb) =>
+    O.isNone(fb) ? O.none : O.some(g(fb.value));
 
 // lift for Task
-export const liftTask = <B, C>(
-  g: (b: B) => C
-): ((fb: T.Task<B>) => T.Task<C>) => (fb) => () => fb().then(g);
+export const liftTask =
+  <B, C>(g: (b: B) => C): ((fb: T.Task<B>) => T.Task<C>) =>
+  (fb) =>
+  () =>
+    fb().then(g);
 
 /**
  * 上面的 lift* 函数看起来几乎是一样的, 这并不是偶然, 他们的底层均遵循同一个函数范式(functional pattern)

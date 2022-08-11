@@ -38,7 +38,7 @@ import {
   number as N,
   function as F,
   boolean as B,
-  option as O,
+  opt as O,
   apply as A,
 } from 'fp-ts';
 
