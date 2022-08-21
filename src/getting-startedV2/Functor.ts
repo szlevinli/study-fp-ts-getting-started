@@ -1,4 +1,4 @@
-import { option, task, functor } from 'fp-ts';
+import { option, task, functor as Fct } from 'fp-ts';
 
 /* 
 Lift `(b: B) => C` to `(fb: F<B>) => F<C>`
@@ -44,3 +44,34 @@ lift: <A, B>(f: (a: A) => B) => ((fa: F<A>) => F<B>)
 map:  <A, B>(fa: F<A>, f: (a: A) => B) => F<B>
 ```
 */
+
+/*
+自定义类型实现 `Functor`
+
+该自定义类型自身有一个泛型 `A`, 在 Haskell 中用 `kind: * -> *` 表示
+*/
+type Response2<A> = {
+  ulr: string;
+  status: number;
+  headers: Record<string, string>;
+  body: A;
+};
+
+const URI = 'Response2';
+type URI = typeof URI;
+
+declare module 'fp-ts/HKT' {
+  interface URItoKind<A> {
+    readonly [URI]: Response2<A>;
+  }
+}
+
+const map = <A, B>(fa: Response2<A>, f: (a: A) => B): Response2<B> => ({
+  ...fa,
+  body: f(fa.body),
+});
+
+const functorResponse2: Fct.Functor1<URI> = {
+  URI,
+  map,
+};
